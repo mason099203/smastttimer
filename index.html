@@ -126,7 +126,7 @@
 
     <!-- 第 1 張圖片：f1.png -->
     <div class="image-wrapper">
-      <img src="f1.png" alt="7 個計時器示意圖">
+      <img src="f1.png" alt="7">
     </div>
 
     <div class="timers-grid" id="timersGrid"></div>
@@ -134,8 +134,20 @@
 
   <script>
     const TIMER_COUNT = 8;
-    const BASE_MINUTES = 1;
+    const BASE_MINUTES = 45;
     const EXTRA_MINUTES = 5;
+
+    // 8 個計時器的名稱，可以依自己需求修改
+    const timerNames = [
+      '1-W',
+      '2-左心',
+      '3-S',
+      '4-右心',
+      '5-陽台',
+      '6-塔尖',
+      '7-2F',
+      '8-女人'
+    ];
 
     const timers = [];
     const grid = document.getElementById('timersGrid');
@@ -154,7 +166,7 @@
 
       const title = document.createElement('div');
       title.className = 'timer-title';
-      title.textContent = `${index + 1}`;
+      title.textContent = timerNames[index] || `計時器 ${index + 1}`;
 
       const display = document.createElement('div');
       display.className = 'time-display';
