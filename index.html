@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>城中豆子計時器</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .nav {
+      text-align: center;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    .nav a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .nav a:hover {
+      text-decoration: underline;
+    }
+    .image-wrapper {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .image-wrapper img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+    .timers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+    .timer-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .timer-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .time-display {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-variant-numeric: tabular-nums;
+      color: #111827;
+    }
+    .timer-status {
+      font-size: 0.85rem;
+      color: #6b7280;
+      min-height: 1em;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      border: none;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.08s ease;
+    }
+    .btn-main {
+      background: #2563eb;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.45);
+    }
+    .btn-main:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.55);
+    }
+    .btn-main:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 4px rgba(37, 99, 235, 0.45);
+    }
+    .btn-extra {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-extra:hover {
+      background: #d1d5db;
+    }
+    .btn-extra:active {
+      background: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>魔甘娜城中計時器</h1>
+    <div class="nav">
+      <label>
+        <input type="checkbox" id="muteAll" />
+        靜音
+      </label>
+    </div>
+
+    <!-- 第 1 張圖片：f1.png -->
+    <div class="image-wrapper">
+      <img src="f1.png" alt="7 個計時器示意圖">
+    </div>
+
+    <div class="timers-grid" id="timersGrid"></div>
+  </div>
+
+  <script>
+    const TIMER_COUNT = 8;
+    const BASE_MINUTES = 1;
+    const EXTRA_MINUTES = 5;
+
+    const timers = [];
+    const grid = document.getElementById('timersGrid');
+    const muteAllCheckbox = document.getElementById('muteAll');
+
+    // 8 個不同的聲音檔，請放在同資料夾中，檔名依序為 sound1.ogg ~ sound8.ogg
+    const sounds = Array.from({ length: TIMER_COUNT }, (_, i) => {
+      const audio = new Audio(`sound${i + 1}.ogg`);
+      audio.preload = 'auto';
+      return audio;
+    });
+
+    function createTimerCard(index) {
+      const card = document.createElement('div');
+      card.className = 'timer-card';
+
+      const title = document.createElement('div');
+      title.className = 'timer-title';
+      title.textContent = `${index + 1}`;
+
+      const display = document.createElement('div');
+      display.className = 'time-display';
+      display.textContent = formatSeconds(BASE_MINUTES * 60);
+
+      const status = document.createElement('div');
+      status.className = 'timer-status';
+      status.textContent = '尚未開始';
+
+      const btnRow = document.createElement('div');
+      btnRow.className = 'btn-row';
+
+      const startBtn = document.createElement('button');
+      startBtn.className = 'btn-main';
+      startBtn.textContent = '開始計時';
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'btn-extra';
+      addBtn.textContent = '延遲時間';
+
+      btnRow.appendChild(startBtn);
+      btnRow.appendChild(addBtn);
+
+      card.appendChild(title);
+      card.appendChild(display);
+      card.appendChild(status);
+      card.appendChild(btnRow);
+
+      grid.appendChild(card);
+
+      const timerState = {
+        id: index,
+        remaining: BASE_MINUTES * 60,
+        intervalId: null,
+        running: false,
+        elements: { display, status }
+      };
+
+      startBtn.addEventListener('click', () => {
+        resetTimer(timerState, BASE_MINUTES * 60);
+        startTimer(timerState);
+      });
+
+      addBtn.addEventListener('click', () => {
+        timerState.remaining += EXTRA_MINUTES * 60;
+        updateDisplay(timerState);
+        if (!timerState.running) {
+          status.textContent = `已加時 +${EXTRA_MINUTES} 分鐘（尚未開始）`;
+        } else {
+          status.textContent = `已加時 +${EXTRA_MINUTES} 分鐘`;
+        }
+      });
+
+      timers.push(timerState);
+    }
+
+    function formatSeconds(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      const mm = String(m).padStart(2, '0');
+      const ss = String(s).padStart(2, '0');
+      return `${mm}:${ss}`;
+    }
+
+    function updateDisplay(timer) {
+      timer.elements.display.textContent = formatSeconds(timer.remaining);
+    }
+
+    function resetTimer(timer, seconds) {
+      if (timer.intervalId) {
+        clearInterval(timer.intervalId);
+        timer.intervalId = null;
+      }
+      timer.remaining = seconds;
+      timer.running = false;
+      updateDisplay(timer);
+    }
+
+    function startTimer(timer) {
+      if (timer.intervalId) {
+        clearInterval(timer.intervalId);
+      }
+      timer.running = true;
+      timer.elements.status.textContent = '計時中...';
+
+      timer.intervalId = setInterval(() => {
+        timer.remaining -= 1;
+        if (timer.remaining <= 0) {
+          timer.remaining = 0;
+          updateDisplay(timer);
+          clearInterval(timer.intervalId);
+          timer.intervalId = null;
+          timer.running = false;
+          timer.elements.status.textContent = '時間到！';
+
+          // 播放對應聲音（若未勾選靜音）
+          if (!muteAllCheckbox.checked) {
+            const sound = sounds[timer.id];
+            if (sound) {
+              try {
+                sound.currentTime = 0;
+                sound.play();
+              } catch (e) {
+                // 忽略播放錯誤以免影響計時
+              }
+            }
+          }
+        } else {
+          updateDisplay(timer);
+        }
+      }, 1000);
+    }
+
+    for (let i = 0; i < TIMER_COUNT; i++) {
+      createTimerCard(i);
+    }
+  </script>
+</body>
+</html>
